@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Set List Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body{margin:0;padding:12px;background:#0f0f14;color:#eee;font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content:center;}
+    .container{width:100%;max-width:520px;}
+    h1{font-size:22px;margin:0 0 8px;}
+    .controls{margin-bottom:8px;}
+    input,button{width:100%;padding:12px;border-radius:12px;border:none;font-size:15px;}
+    button{margin-top:10px;background:#4f46e5;color:white;}
+    ul{list-style:none;padding:0;margin:0;}
+    li{display:flex;gap:12px;padding:22px;margin-bottom:12px;border-radius:18px;align-items:flex-start;}
+    .early{background:#1f2937;} .mid{background:#312e81;} .late{background:#4c1d95;} .last{background:#7c2d12;}
+    .stamina-dot{margin-left:6px;font-size:12px;}
+    .explore{margin-left:auto;font-size:11px;opacity:0.6;align-self:flex-start;}
+    .title{font-size:16px;line-height:1.3;}
+    .meta{margin-top:6px;font-size:13px;color:#9ca3af;}
+    .number{color:#6b7280;margin-left:6px;}
+    .stats{margin-top:6px;font-size:13px;display:flex;gap:12px;align-items:center;}
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🎤 Set List Generator</h1>
+  <div class="controls">
+    <input type="number" id="count" min="5" max="15" value="10" />
+    <button onclick="generate()">🎲 세트리스트 생성</button>
+  </div>
+  <ul id="list"></ul>
+</div>
+<script>
+const DEFAULT_EMOJI = '🎵';
+
+/* ===== 초반 난이도/스테미나 제한 ===== */
+const EARLY_MAX_COST = 7;
+const EARLY_MAX_DIFFICULTY = 2;
+
+/* ===== 실제 곡 리스트 ===== */
+const songs = [
+  // 米津玄師
+  {artist:"米津玄師",title:"死神",emoji:"🕯",number:00000,difficulty:2,cost:6,recommend:12,isLast:true},
+  {artist:"米津玄師",title:"でしょましょ",emoji:"🦌",number:00000,difficulty:3,cost:7,recommend:13,isLast:false},
+  {artist:"米津玄師",title:"まちがいさがし",emoji:"🔍",number:52728,difficulty:2,cost:3,recommend:6,isLast:false},
+  {artist:"米津玄師",title:"灰色と青",emoji:"🔵",number:28789,difficulty:1,cost:6,recommend:4,isLast:false},
+  {artist:"米津玄師",title:"アイネクライネ",emoji:"☂️",number:28607,difficulty:2,cost:6,recommend:4,isLast:false},
+  {artist:"米津玄師",title:"Flamingo",emoji:"🦩",number:28983,difficulty:3,cost:6,recommend:5,isLast:false},
+  {artist:"米津玄師",title:"Lemon",emoji:"🍋",number:28822,difficulty:3,cost:4,recommend:13,isLast:true},
+  {artist:"米津玄師",title:"Loser",emoji:"🖕",number:28686,difficulty:1,cost:4,recommend:8,isLast:false},
+  {artist:"米津玄師",title:"Vivi",emoji:"✉️",number:27915,difficulty:2,cost:3,recommend:11,isLast:true},
+  {artist:"米津玄師",title:"感電",emoji:"⚡️",number:68300,difficulty:2,cost:3,recommend:15,isLast:true},
+  {artist:"米津玄師",title:"Pale Blue",emoji:"💐",number:68423,difficulty:5,cost:16,recommend:4,isLast:false},
+  {artist:"米津玄師",title:"馬と鹿",emoji:"🐎",number:68094,difficulty:2,cost:6,recommend:9,isLast:false},
+  {artist:"米津玄師",title:"Kick back",emoji:"⚙️",number:68677,difficulty:3,cost:12,recommend:12,isLast:true},
+  {artist:"米津玄師",title:"月を見ていた",emoji:"🌕",number:68824,difficulty:4,cost:8,recommend:3,isLast:false},
+  {artist:"米津玄師",title:"さよーならまたいつか！",emoji:"🐯",number:52580,difficulty:3,cost:10,recommend:7,isLast:true},
+  {artist:"米津玄師",title:"Lady",emoji:"🦵",number:68495,difficulty:2,cost:7,recommend:6,isLast:false},
+  {artist:"米津玄師",title:"Bow and Arrow",emoji:"🏹",number:52796,difficulty:3,cost:12,recommend:5,isLast:false},
+  {artist:"米津玄師",title:"がらくた",emoji:"🔩",number:52725,difficulty:3,cost:10,recommend:8,isLast:true},
+  {artist:"米津玄師",title:"Azalea",emoji:"🌹",number:52828,difficulty:3,cost:9,recommend:7,isLast:false},
+  {artist:"米津玄師",title:"Plazma",emoji:"🚦",number:52905,difficulty:4,cost:18,recommend:4,isLast:false},
+  {artist:"米津玄師",title:"打上花火",emoji:"🎆",number:28750,difficulty:3,cost:17,recommend:9,isLast:false},
+  {artist:"米津玄師",title:"地球儀",emoji:"🌏",number:68840,difficulty:3,cost:10,recommend:10,isLast:false},
+  {artist:"米津玄師",title:"海の幽霊",emoji:"🌊",number:68019,difficulty:4,cost:19,recommend:10,isLast:false},
+  {artist:"米津玄師",title:"Orion",emoji:"⭐️",number:28660,difficulty:2,cost:7,recommend:9,isLast:false},
+  {artist:"米津玄師",title:"ゴーゴー幽霊船",emoji:"👻",number:27941,difficulty:3,cost:10,recommend:11,isLast:false},
+  {artist:"米津玄師",title:"春雷",emoji:"🌷",number:28795,difficulty:5,cost:15,recommend:3,isLast:false},
+  {artist:"米津玄師",title:"毎日",emoji:"🗓",number:68478,difficulty:5,cost:9,recommend:8,isLast:false},
+  {artist:"米津玄師",title:"MAD HEAD LOVE",emoji:"🤍",number:28596,difficulty:3,cost:8,recommend:6,isLast:false},
+  {artist:"米津玄師",title:"ゆめうつつ",emoji:"😴",number:52764,difficulty:3,cost:10,recommend:9,isLast:false},
+  {artist:"米津玄師",title:"RED OUT",emoji:"🐰",number:52737,difficulty:4,cost:12,recommend:7,isLast:false},
+  {artist:"米津玄師",title:"メトロノーム",emoji:"⏱️",number:27945,difficulty:1,cost:3,recommend:10,isLast:true},
+  {artist:"米津玄師",title:"M87",emoji:"🌌",number:52892,difficulty:4,cost:9,recommend:6,isLast:false},
+  {artist:"米津玄師",title:"IRIS OUT",emoji:"⚫️",number:52959,difficulty:2,cost:8,recommend:15,isLast:false},
+  {artist:"米津玄師",title:"JANE DOE",emoji:"🍎",number:52972,difficulty:3,cost:11,recommend:16,isLast:true},
+  {artist:"米津玄師",title:"1991",emoji:"❄️",number:52977,difficulty:3,cost:8,recommend:15,isLast:true},
+  {artist:"米津玄師",title:"LOST CORNER",emoji:"🛑",number:52952,difficulty:5,cost:21,recommend:7,isLast:false},
+  {artist:"米津玄師",title:"NANIMONO",emoji:"🕺",number:68173,difficulty:2,cost:9,recommend:7,isLast:false},
+  {artist:"米津玄師",title:"メランコリーキッチン",emoji:"🍽️",number:52997,difficulty:3,cost:8,recommend:19,isLast:false},
+
+  // ハチ
+  {artist:"ハチ",title:"ドーナツホール",emoji:"🍩",number:28229,difficulty:3,cost:12,recommend:9,isLast:false},
+  {artist:"ハチ",title:"砂の惑星",emoji:"⏳️",number:28736,difficulty:4,cost:15,recommend:8,isLast:false},
+  {artist:"ハチ",title:"Mrs.Pumpkinの滑稽な夢",emoji:"🎃",number:28090,difficulty:3,cost:9,recommend:12,isLast:false},
+  {artist:"ハチ",title:"マトリョシカ",emoji:"🪆",number:28269,difficulty:3,cost:18,recommend:10,isLast:false},
+  {artist:"ハチ",title:"結ンデ開イテ羅刹と骸",emoji:"😸",number:28290,difficulty:5,cost:20,recommend:6,isLast:false},
+  {artist:"ハチ",title:"リンネ",emoji:"🩸",number:28282,difficulty:5,cost:25,recommend:1,isLast:false},
+  {artist:"ハチ",title:"パンダヒーロー",emoji:"🐼",number:28247,difficulty:5,cost:13,recommend:1,isLast:false},
+
+  // Foorin
+  {artist:"Foorin",title:"パプリカ",emoji:"🫑",number:68089,difficulty:2,cost:6,recommend:8,isLast:false},
+
+  // Mrs. GREEN APPLE
+  {artist:"Mrs. GREEN APPLE",title:"クスシキ",emoji:"🌲",number:52834,difficulty:4,cost:14,recommend:3,isLast:false},
+  {artist:"Mrs. GREEN APPLE",title:"僕のこと",emoji:"🌌",number:68248,difficulty:4,cost:10,recommend:8,isLast:false},
+  {artist:"Mrs. GREEN APPLE",title:"春愁",emoji:"📜",number:68207,difficulty:3,cost:4,recommend:13,isLast:false},
+  {artist:"Mrs. GREEN APPLE",title:"天国",emoji:"✨",number:52924,difficulty:5,cost:27,recommend:11,isLast:false},
+  {artist:"Mrs. GREEN APPLE",title:"Soranji",emoji:"☁️",number:68736,difficulty:5,cost:26,recommend:3,isLast:true},
+  {artist:"Mrs. GREEN APPLE",title:"ア・プリオリ",emoji:"🧠",number:52856,difficulty:4,cost:14,recommend:12,isLast:false},
+  {artist:"Mrs. GREEN APPLE",title:"ケセラセラ",emoji:"🌈",number:52844,difficulty:5,cost:12,recommend:5,isLast:false},
+  {artist:"Mrs. GREEN APPLE",title:"ダンスホール",emoji:"💃",number:68620,difficulty:4,cost:8,recommend:3,isLast:false},
+  {artist:"Mrs. GREEN APPLE",title:"ライラック",emoji:"🌸",number:68461,difficulty:4,cost:10,recommend:6,isLast:false},
+  {artist:"Mrs. GREEN APPLE",title:"青と夏",emoji:"🚲",number:68127,difficulty:4,cost:12,recommend:9,isLast:false},
+
+   // Tuki.
+  {artist:"Tuki.",title:"晩餐歌",emoji:"🍴",number:52788,difficulty:3,cost:10,recommend:3,isLast:false},
+
+  // 優里
+  {artist:"優里",title:"レオ",emoji:"🐕",number:52773,difficulty:3,cost:10,recommend:7,isLast:true},
+  {artist:"優里",title:"桜晴",emoji:"🌸",number:52760,difficulty:2,cost:7,recommend:8,isLast:true},
+  {artist:"優里",title:"ビリミリオン",emoji:"💰",number:52860,difficulty:3,cost:6,recommend:9,isLast:true},
+  {artist:"優里",title:"ベテルギウス",emoji:"✡️",number:68553,difficulty:4,cost:12,recommend:7,isLast:false},
+
+  // 星街すいせい
+  {artist:"星街すいせい",title:"ビビデバ",emoji:"👠",number:52998,difficulty:5,cost:18,recommend:2,isLast:false},
+
+  // スキマスイッチ
+  {artist:"スキマスイッチ",title:"雫",emoji:"💧",number:27692,difficulty:2,cost:8,recommend:10,isLast:true},
+
+  // Queen Bee
+  {artist:"Queen Bee",title:"メフィスト",emoji:"🌟",number:68830,difficulty:5,cost:28,recommend:4,isLast:false},
+
+  // eill
+  {artist:"eill",title:"フィナーレ",emoji:"🪐",number:68845,difficulty:4,cost:10,recommend:6,isLast:true},
+
+  // こっちのけんと
+  {artist:"こっちのけんと",title:"はいよろこんで",emoji:"🫣",number:52761,difficulty:3,cost:11,recommend:9,isLast:false},
+
+  // なとり
+  {artist:"なとり",title:"プロポーズ",emoji:"🚲",number:52402,difficulty:2,cost:5,recommend:12,isLast:false},
+  {artist:"なとり",title:"Overdose",emoji:"💉",number:68698,difficulty:1,cost:5,recommend:6,isLast:false},
+
+  // Vaundy
+  {artist:"Vaundy",title:"怪獣の鼻唄",emoji:"🐶",number:52988,difficulty:3,cost:13,recommend:8,isLast:true},
+  {artist:"Vaundy",title:"踊り子",emoji:"💃",number:68807,difficulty:2,cost:3,recommend:4,isLast:false},
+  {artist:"Vaundy",title:"東京フラッシュ",emoji:"📸",number:52407,difficulty:2,cost:5,recommend:12,isLast:false},
+  {artist:"Vaundy",title:"タイムパラドックス",emoji:"⏰",number:68912,difficulty:2,cost:5,recommend:7,isLast:false},
+
+  // Ado
+  {artist:"Ado",title:"うっせぇわ",emoji:"📢",number:68458,difficulty:4,cost:20,recommend:4,isLast:false},
+  {artist:"Ado",title:"ギラギラ",emoji:"✨",number:52716,difficulty:3,cost:17,recommend:4,isLast:false},
+
+  // back number
+  {artist:"back number",title:"ブルーアンバー",emoji:"🫐",number:52942,difficulty:3,cost:6,recommend:10,isLast:false},
+  {artist:"back number",title:"水平線",emoji:"🏝️",number:68446,difficulty:2,cost:8,recommend:12,isLast:true},
+  {artist:"back number",title:"ヒロイン",emoji:"⛄️",number:27762,difficulty:3,cost:7,recommend:18,isLast:true},
+
+  // 奥草子
+  {artist:"奥草子",title:"変わらないもの",emoji:"🕧",number:27532,difficulty:2,cost:11,recommend:5,isLast:false},
+
+  // バルーン
+  {artist:"バルーン",title:"シャルル",emoji:"☁️",number:28700,difficulty:5,cost:30,recommend:2,isLast:true},
+
+  // 鏡音レン
+  {artist:"鏡音レン",title:"悪ノ召使",emoji:"🌼",number:26944,difficulty:3,cost:9,recommend:5,isLast:false},
+
+  // Official髭男dism
+  {artist:"Official髭男dism",title:"宿命",emoji:"🌠",number:26944,difficulty:3,cost:12,recommend:9,isLast:true},
+  {artist:"Official髭男dism",title:"Pretender",emoji:"🥳",number:68058,difficulty:4,cost:15,recommend:6,isLast:false},
+
+  // 星野源
+  {artist:"星野源",title:"2",emoji:"♊️",number:52915,difficulty:2,cost:4,recommend:6,isLast:false},
+  {artist:"星野源",title:"恋",emoji:"❤️",number:27982,difficulty:1,cost:5,recommend:8,isLast:true},
+
+  // 菅田将暉
+  {artist:"菅田将暉",title:"さよならエリジー",emoji:"👋",number:28834,difficulty:2,cost:10,recommend:8,isLast:false},
+
+  // SPYAIR
+  {artist:"SPYAIR",title:"サムライハート",emoji:"🗡️",number:57527,difficulty:3,cost:13,recommend:9,isLast:false},
+
+  // King Gnu
+  {artist:"King Gnu",title:"百日",emoji:"⚪️",number:68031,difficulty:4,cost:17,recommend:8,isLast:false},
+  {artist:"King Gnu",title:"逆夢",emoji:"🛌",number:68561,difficulty:4,cost:18,recommend:7,isLast:false},
+
+  // Hump Back
+  {artist:"Hump Back",title:"拝啓、少年よ",emoji:"👦",number:52756,difficulty:3,cost:16,recommend:6,isLast:true},
+
+  // 椎名林檎
+  {artist:"椎名林檎",title:"丸の内サディスティック",emoji:"🎸",number:25837,difficulty:3,cost:7,recommend:8,isLast:false},
+
+  // imase
+  {artist:"imase",title:"NIGHT DANCER",emoji:"🌉",number:68740,difficulty:2,cost:5,recommend:0,isLast:true},
+
+  // 髙橋洋子
+  {artist:"髙橋洋子",title:"残酷な天使のテーゼ",emoji:"👼",number:25246,difficulty:3,cost:9,recommend:4,isLast:false},
+
+  // 배카인
+  {artist:"배카인",title:"NoMorE",emoji:"❌",number:42999,difficulty:3,cost:10,recommend:6,isLast:false},
+  {artist:"배카인",title:"적색도시",emoji:"🌆",number:44325,difficulty:4,cost:19,recommend:5,isLast:false},
+  {artist:"배카인",title:"피에로의축제",emoji:"🎪",number:82190,difficulty:3,cost:13,recommend:7,isLast:false},
+  {artist:"배카인",title:"가애",emoji:"⛓️",number:83848,difficulty:2,cost:7,recommend:6,isLast:false},
+
+  // 50mang(쏘망)
+  {artist:"50mang(쏘망)",title:"장산범",emoji:"🐅",number:76726,difficulty:4,cost:23,recommend:2,isLast:false},
+
+  // 달의하루
+  {artist:"달의하루",title:"염라",emoji:"⚖️",number:75449,difficulty:4,cost:20,recommend:3,isLast:false},
+  {artist:"달의하루",title:"순혈주의자",emoji:"🩸",number:84327,difficulty:5,cost:22,recommend:2,isLast:false},
+
+  // 노라조
+  {artist:"노라조",title:"형(兄)",emoji:"🫴",number:31943,difficulty:3,cost:10,recommend:4,isLast:false},
+
+  // 애쉬그레이
+  {artist:"애쉬그레이",title:"Hello Mr. My Yesterday",emoji:"🌒",number:84695,difficulty:2,cost:6,recommend:6,isLast:false},
+
+  // 안예은
+  {artist:"안예은",title:"홍연",emoji:"🌳",number:49522,difficulty:3,cost:12,recommend:2,isLast:false},
+  {artist:"안예은",title:"상사화",emoji:"🏹",number:48943,difficulty:3,cost:7,recommend:1,isLast:false},
+
+  // 잔나비
+  {artist:"잔나비",title:"사랑하긴 했었나요 스쳐가는 인연이었나요",emoji:"🖤",number:53759,difficulty:4,cost:13,recommend:3,isLast:false},
+
+  // 이무진
+  {artist:"이무진",title:"신호등",emoji:"🚦",number:76890,difficulty:3,cost:7,recommend:5,isLast:false},
+
+  // 윤종신
+  {artist:"윤종신",title:"좋니",emoji:"🎁",number:49818,difficulty:3,cost:9,recommend:2,isLast:false},
+
+  // 전영호
+  {artist:"전영호",title:"Butter-Fly",emoji:"🦋",number:81866,difficulty:2,cost:8,recommend:7,isLast:true},
+
+  // AKMU
+  {artist:"AKMU",title:"낙하",emoji:"🍂",number:77503,difficulty:4,cost:12,recommend:2,isLast:false},
+  {artist:"AKMU",title:"후라이의 꿈",emoji:"🎨",number:84443,difficulty:4,cost:11,recommend:2,isLast:false},
+  {artist:"AKMU",title:"뱃노래",emoji:"🚢",number:24185,difficulty:2,cost:5,recommend:9,isLast:false},
+
+  // 조정석
+  {artist:"조정석",title:"아로하",emoji:"☁️",number:89245,difficulty:3,cost:6,recommend:0,isLast:false},
+
+  // 체리필터
+  {artist:"체리필터",title:"낭만고양이",emoji:"🐱",number:6093,difficulty:5,cost:25,recommend:3,isLast:false},
+
+  // 쿨
+  {artist:"쿨",title:"애상",emoji:"🌙",number:4509,difficulty:4,cost:17,recommend:2,isLast:false},
+
+  // 스텔라장
+  {artist:"스텔라장",title:"빌런",emoji:"💬",number:89282,difficulty:4,cost:9,recommend:3,isLast:false},
+
+  // 태연
+  {artist:"태연",title:"사계",emoji:"🍂",number:53710,difficulty:3,cost:13,recommend:5,isLast:false},
+
+  // 유정석
+  {artist:"유정석",title:"질풍가도",emoji:"🎭",number:15124,difficulty:2,cost:15,recommend:3,isLast:true},
+
+  // Imagine Dragons
+  {artist:"Imagine Dragons",title:"Enemy",emoji:"⚡",number:23821,difficulty:4,cost:12,recommend:1,isLast:false},
+
+  // Marino
+  {artist:"Marino",title:"Im Doing Fine",emoji:"📼",number:73819,difficulty:1,cost:2,recommend:7,isLast:false},
+
+  // Andy Grammer
+  {artist:"Andy Grammer",title:"These Tears",emoji:"💧",number:79564,difficulty:3,cost:7,recommend:8,isLast:true},
+
+  // Billy Joel
+  {artist:"Billy Joel",title:"Piano Man",emoji:"🎹",number:20010,difficulty:2,cost:7,recommend:5,isLast:false},
+
+  // Sting
+  {artist:"Sting",title:"Englishman in New York",emoji:"🗽",number:7386,difficulty:3,cost:5,recommend:2,isLast:false},
+
+  // Sia
+  {artist:"Sia",title:"Snowman",emoji:"❄️",number:23268,difficulty:2,cost:4,recommend:3,isLast:false},
+
+  // Fool’s Garden
+  {artist:"Fool’s Garden",title:"Lemon Tree",emoji:"🍋",number:7761,difficulty:1,cost:2,recommend:0,isLast:false},
+
+  // Zac Efron, Zendaya
+  {artist:"Zac Efron, Zendaya",title:"Rewrite The Stars",emoji:"🎪",number:23165,difficulty:3,cost:12,recommend:2,isLast:false},
+
+  // Anne-Marie
+  {artist:"Anne-Marie",title:"2002",emoji:"📅",number:23190,difficulty:3,cost:9,recommend:0,isLast:false}
+];
+
+
+function weightedPick(pool){
+  const weights = pool.map(s => {
+    const base = (s.recommend ?? 0) + 1;
+    // 스테미나 13 이상 곡은 가중치 감소 (앞부분 억제)
+    return s.cost >= 13 ? base * 0.4 : base;
+  });
+  let r = Math.random() * weights.reduce((a,b)=>a+b,0);
+  for(let i=0;i<pool.length;i++){ r -= weights[i]; if(r <= 0) return pool[i]; }
+  return pool[pool.length-1];
+}
+
+function staminaColor(c){
+  if(c <= 7) return '#22c55e';
+  if(c <= 14) return '#facc15';
+  return '#ef4444';
+}
+
+function pushHardSongsBack(list, earlyCount) {
+  const early = list.slice(0, earlyCount);
+  const rest = list.slice(earlyCount);
+
+  rest.sort((a, b) => {
+    const aScore = a.cost >= 13 ? 1 : 0;
+    const bScore = b.cost >= 13 ? 1 : 0;
+    return aScore - bScore;
+  });
+
+  return [...early, ...rest];
+}
+
+function generate(){
+  const N = Number(document.getElementById('count').value);
+  let result = [];
+
+  const lastPool = songs.filter(s => s.isLast);
+  const last = weightedPick(lastPool);
+  let pool = songs.filter(s => s !== last);
+
+  const earlyCount = Math.ceil(N * 0.2);
+
+  while(result.length < N && pool.length){
+    let candidatePool = pool;
+
+    if(result.length < earlyCount){
+      const filtered = pool.filter(s => s.cost <= EARLY_MAX_COST && s.difficulty <= EARLY_MAX_DIFFICULTY);
+      if(filtered.length) candidatePool = filtered;
+    }
+
+    const explore = Math.random() < 0.2;
+    const pick = weightedPick(candidatePool);
+    pick._explore = explore;
+    result.push(pick);
+    pool = pool.filter(s => s !== pick);
+  }
+
+
+// 🔴 여기서 재배치 적용
+result = pushHardSongsBack(result, earlyCount);
+
+render(result);
+}
+
+function render(list){
+  const ul = document.getElementById('list');
+  ul.innerHTML = '';
+
+  const total = list.length;
+  const early = Math.ceil(total * 0.2);
+  const mid = Math.ceil(total * 0.7);
+
+  list.forEach((s,i)=>{
+    if(!s) return;
+    const li = document.createElement('li');
+    if(i === total-1) li.className='last';
+    else if(i < early) li.className='early';
+    else if(i < mid) li.className='mid';
+    else li.className='late';
+
+    const emoji = s.emoji || DEFAULT_EMOJI;
+
+    li.innerHTML = `
+      <div style="font-size:30px">${emoji}</div>
+      <div style="flex:1">
+        <div class="title">${i+1}. <b>${s.title}</b></div>
+        <div class="meta">${s.artist}<span class="number">#${s.number}</span></div>
+        <div class="stats">
+          <span>난이도 ${'★'.repeat(s.difficulty)}</span>
+          <span>스테미나 ${s.cost}<span class="stamina-dot" style="color:${staminaColor(s.cost)}">●</span></span>
+        </div>
+      </div>
+      ${s._explore ? '<div class="explore">🧭</div>' : ''}
+    `;
+    ul.appendChild(li);
+  });
+}
+
+console.assert(songs.length > 0, '곡 리스트가 비어있지 않아야 함');
+console.assert(songs.every(s => s.title && s.artist), '모든 곡은 제목과 아티스트를 가져야 함');
+// 최초 1회 자동 생성
+window.addEventListener('DOMContentLoaded', generate);
+</script>
+</body>
+</html>
